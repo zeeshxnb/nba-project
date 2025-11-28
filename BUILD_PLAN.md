@@ -60,8 +60,8 @@
 │  STEP 3.2  │  XGBoost + comparison                │
 └───────────────────────────────────────────────────┘
 ```
-- [ ] 3.1 Complete
-- [ ] 3.2 Complete
+- [x] 3.1 Complete
+- [x] 3.2 Complete
 
 ---
 
@@ -88,6 +88,29 @@
 ```
 - [ ] 5.1 Complete
 - [ ] 5.2 Complete
+
+---
+
+### PHASE 6: Analysis & Tuning (Course Requirements)
+```
+┌───────────────────────────────────────────────────┐
+│  STEP 6.1  │  Data visualization                  │
+├───────────────────────────────────────────────────┤
+│  STEP 6.2  │  Hyperparameter tuning (GridSearch)  │
+├───────────────────────────────────────────────────┤
+│  STEP 6.3  │  Under/overfitting analysis          │
+├───────────────────────────────────────────────────┤
+│  STEP 6.4  │  Held-out test (2023-24 season)      │
+├───────────────────────────────────────────────────┤
+│  STEP 6.5  │  "Something Extra" - Random Forest   │
+│            │   + Feature Selection                │
+└───────────────────────────────────────────────────┘
+```
+- [ ] 6.1 Complete
+- [ ] 6.2 Complete
+- [ ] 6.3 Complete
+- [ ] 6.4 Complete
+- [ ] 6.5 Complete
 
 ---
 

@@ -50,4 +50,3 @@ if __name__ == "__main__":
     print(f"Team stats: {len(stats)} rows, {len(stats.columns)} columns")
     print(f"Seasons: {stats['SEASON'].nunique()} ({stats['SEASON'].min()} to {stats['SEASON'].max()})")
     print(f"\nColumns: {list(stats.columns)}")
-

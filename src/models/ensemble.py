@@ -1,14 +1,10 @@
-"""
-Step 3.1: Logistic Regression (baseline)
-Step 3.2: XGBoost + comparison
-"""
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import cross_val_score
 from xgboost import XGBClassifier
-from .data_loader import load_team_stats, load_series_history
-from .features import build_matchup_features, get_feature_columns
+from ..data_loader import load_team_stats, load_series_history
+from ..features import build_matchup_features, get_feature_columns
 
 
 class PlayoffPredictor:
@@ -66,29 +62,4 @@ def train_model():
     model = PlayoffPredictor()
     model.train(X, y)
     return model, df
-
-
-if __name__ == "__main__":
-    team_stats = load_team_stats()
-    series = load_series_history()
-    df = build_matchup_features(series, team_stats)
-    
-    feature_cols = get_feature_columns()
-    X = df[feature_cols].values
-    y = df['team_a_won'].values
-    
-    model = PlayoffPredictor()
-    scores = model.evaluate(X, y)
-    
-    print("Cross-validated accuracy:")
-    print(f"  Logistic Regression: {scores['logreg']:.1%}")
-    print(f"  XGBoost:             {scores['xgboost']:.1%}")
-    print(f"  Ensemble:            {scores['ensemble']:.1%}")
-    
-    # Train and show feature importance
-    model.train(X, y)
-    print("\nTop 5 features (XGBoost importance):")
-    importance = model.feature_importance()
-    for feat, imp in sorted(importance.items(), key=lambda x: -x[1])[:5]:
-        print(f"  {feat}: {imp:.3f}")
 

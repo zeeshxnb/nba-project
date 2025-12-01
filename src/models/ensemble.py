@@ -3,8 +3,8 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import cross_val_score
 from xgboost import XGBClassifier
-from ..data_loader import load_team_stats, load_series_history
-from ..features import build_matchup_features, get_feature_columns
+from ..data.ingest import load_team_stats, load_series_history
+from ..data.processing import build_matchup_features, get_feature_columns
 
 
 class PlayoffPredictor:

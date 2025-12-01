@@ -1,9 +1,5 @@
-"""
-Step 2.1: Calculate stat differentials
-Step 2.2: Add seeding & home court features
-"""
 import pandas as pd
-from .data_loader import load_team_stats, load_series_history
+from .ingest import load_team_stats, load_series_history
 
 # Stats to compute differentials for (higher = better for team)
 DIFF_FEATURES = [
@@ -13,13 +9,11 @@ DIFF_FEATURES = [
 # Stats where lower is better (flip sign)
 INVERSE_FEATURES = ['DEF_RATING', 'TM_TOV_PCT', 'OPP_EFG_PCT', 'OPP_OREB_PCT', 'OPP_FTA_RATE']
 
-
 def build_matchup_features(series_df: pd.DataFrame, team_stats: pd.DataFrame) -> pd.DataFrame:
     """
     Build feature matrix for each historical series matchup.
     Features are differentials: team_a_stat - team_b_stat
     """
-    # Map team abbreviation to full stats for each season
     stats_by_abbrev = _create_abbrev_mapping(team_stats)
     
     features = []
@@ -47,17 +41,16 @@ def build_matchup_features(series_df: pd.DataFrame, team_stats: pd.DataFrame) ->
         # Home court: team with better record has it
         feat['home_court'] = 1 if a_stats['W_PCT'] >= b_stats['W_PCT'] else 0
         
-        # Target: did team_a win?
-        feat['team_a_won'] = 1 if row['winner'] == team_a else 0
+        # Target: did team_a win? (If winner column exists)
+        if 'winner' in row:
+            feat['team_a_won'] = 1 if row['winner'] == team_a else 0
         
         features.append(feat)
     
     return pd.DataFrame(features)
 
-
 def _create_abbrev_mapping(team_stats: pd.DataFrame) -> dict:
     """Create (abbreviation, season) -> stats mapping."""
-    # Team name to abbreviation mapping
     abbrev_map = {
         'Atlanta Hawks': 'ATL', 'Boston Celtics': 'BOS', 'Brooklyn Nets': 'BKN',
         'Charlotte Hornets': 'CHA', 'Charlotte Bobcats': 'CHA', 'Chicago Bulls': 'CHI',
@@ -82,22 +75,15 @@ def _create_abbrev_mapping(team_stats: pd.DataFrame) -> dict:
     
     return mapping
 
-
 def get_feature_columns() -> list:
-    """Return list of feature column names (for model training)."""
+    """Return list of feature column names."""
     cols = [f'{c.lower()}_diff' for c in DIFF_FEATURES + INVERSE_FEATURES]
     cols.append('home_court')
     return cols
 
-
-if __name__ == "__main__":
-    # Test
+def make_dataset():
+    """Orchestrator: Load data -> Process -> Return DataFrame"""
     team_stats = load_team_stats()
-    series = load_series_history()
-    
-    df = build_matchup_features(series, team_stats)
-    print(f"Built {len(df)} matchup samples")
-    print(f"Features: {get_feature_columns()}")
-    print(f"\nSample:\n{df.head()}")
-
+    series_history = load_series_history()
+    return build_matchup_features(series_history, team_stats)
 

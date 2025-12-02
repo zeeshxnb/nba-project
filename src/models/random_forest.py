@@ -1,19 +1,18 @@
-"""XGBoost model for playoff series prediction."""
+"""Random Forest model for playoff series prediction."""
 
-from xgboost import XGBClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import cross_val_score
 import numpy as np
 
 
-class XGBoostModel:
-    """XGBoost classifier for predicting playoff series winners."""
+class RandomForestModel:
+    """Random Forest classifier for predicting playoff series winners."""
     
-    def __init__(self, n_estimators=100, max_depth=3, learning_rate=0.1):
-        self.model = XGBClassifier(
+    def __init__(self, n_estimators=100, max_depth=5, min_samples_split=5):
+        self.model = RandomForestClassifier(
             n_estimators=n_estimators,
             max_depth=max_depth,
-            learning_rate=learning_rate,
-            eval_metric='logloss',
+            min_samples_split=min_samples_split,
             random_state=42
         )
         self.is_trained = False

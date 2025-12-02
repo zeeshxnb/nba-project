@@ -1,17 +1,23 @@
-"""Logistic Regression model for playoff series prediction."""
+"""Support Vector Machine model for playoff series prediction."""
 
-from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import cross_val_score
 import numpy as np
 
 
-class LogisticModel:
-    """Logistic Regression classifier for predicting playoff series winners."""
+class SVMModel:
+    """SVM classifier for predicting playoff series winners."""
     
-    def __init__(self, max_iter=1000, C=1.0):
+    def __init__(self, C=1.0, kernel='rbf', gamma='scale'):
         self.scaler = StandardScaler()
-        self.model = LogisticRegression(max_iter=max_iter, C=C, random_state=42)
+        self.model = SVC(
+            C=C,
+            kernel=kernel,
+            gamma=gamma,
+            probability=True,  # Enable predict_proba
+            random_state=42
+        )
         self.is_trained = False
         self.feature_names = None
     
@@ -41,12 +47,3 @@ class LogisticModel:
             'std': scores.std(),
             'scores': scores
         }
-    
-    def get_coefficients(self):
-        """Return feature coefficients (interpretability)."""
-        if not self.is_trained:
-            return {}
-        coefs = self.model.coef_[0]
-        if self.feature_names is not None:
-            return dict(zip(self.feature_names, coefs))
-        return coefs

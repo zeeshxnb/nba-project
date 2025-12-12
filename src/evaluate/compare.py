@@ -1,4 +1,4 @@
-"""Compare all 4 models with proper train/test split."""
+"""Model comparison with train/test split."""
 
 import numpy as np
 import pandas as pd
@@ -23,19 +23,7 @@ def get_all_models():
 
 
 def evaluate_all_models(test_season='2022-23', cv=5):
-    """
-    Evaluate all models using:
-    1. Cross-validation on training data (model selection)
-    2. Final evaluation on held-out test set (true performance)
-    
-    Args:
-        test_season: Season to hold out for final testing
-        cv: Number of cross-validation folds
-    
-    Returns:
-        DataFrame with results for all models
-    """
-    # Get data split
+    """Evaluate all models using cross-validation and held-out test set."""
     X_train, X_test, y_train, y_test, feature_cols, df = get_train_test_split(test_season)
     
     print("=" * 70)
@@ -51,22 +39,18 @@ def evaluate_all_models(test_season='2022-23', cv=5):
     results = []
     
     for name, model in models.items():
-        # Cross-validation accuracy (on training data only)
         cv_result = model.evaluate(X_train, y_train, cv=cv)
         cv_acc = cv_result['mean_accuracy']
         cv_std = cv_result['std']
         
-        # Train on ALL training data
         model.train(X_train, y_train, feature_names=feature_cols)
         
-        # Test on held-out test set
         y_pred = model.predict(X_test)
         test_acc = accuracy_score(y_test, y_pred)
         test_precision = precision_score(y_test, y_pred, zero_division=0)
         test_recall = recall_score(y_test, y_pred, zero_division=0)
         test_f1 = f1_score(y_test, y_pred, zero_division=0)
         
-        # Count correct predictions
         correct = (y_pred == y_test).sum()
         total = len(y_test)
         
@@ -83,7 +67,6 @@ def evaluate_all_models(test_season='2022-23', cv=5):
     
     results_df = pd.DataFrame(results)
     
-    # Print results table
     print("=" * 70)
     print("RESULTS TABLE")
     print("=" * 70)
@@ -91,17 +74,16 @@ def evaluate_all_models(test_season='2022-23', cv=5):
     print("-" * 70)
     
     for _, row in results_df.iterrows():
-        print(f"{row['Model']:<22} {row['CV Accuracy']:.1%} ±{row['CV Std']:.1%}   "
+        print(f"{row['Model']:<22} {row['CV Accuracy']:.1%} +/-{row['CV Std']:.1%}   "
               f"{row['Test Accuracy']:.1%}         {row['Test Correct']}")
     
     print("-" * 70)
     
-    # Find best models
     best_cv = results_df.loc[results_df['CV Accuracy'].idxmax()]
     best_test = results_df.loc[results_df['Test Accuracy'].idxmax()]
     
-    print(f"\n🏆 Best CV Accuracy:   {best_cv['Model']} ({best_cv['CV Accuracy']:.1%})")
-    print(f"🏆 Best Test Accuracy: {best_test['Model']} ({best_test['Test Accuracy']:.1%})")
+    print(f"\nBest CV Accuracy:   {best_cv['Model']} ({best_cv['CV Accuracy']:.1%})")
+    print(f"Best Test Accuracy: {best_test['Model']} ({best_test['Test Accuracy']:.1%})")
     
     return results_df, models
 
@@ -111,7 +93,6 @@ def show_test_predictions(test_season='2022-23'):
     X_train, X_test, y_train, y_test, feature_cols, df = get_train_test_split(test_season)
     test_df = df[df['season'] == test_season].reset_index(drop=True)
     
-    # Train best model (Logistic Regression based on earlier results)
     model = LogisticModel()
     model.train(X_train, y_train, feature_names=feature_cols)
     
@@ -129,7 +110,7 @@ def show_test_predictions(test_season='2022-23'):
         pred_winner = row['team_a'] if y_pred[i] == 1 else row['team_b']
         actual_winner = row['team_a'] if y_test[i] == 1 else row['team_b']
         prob = y_prob[i] if y_pred[i] == 1 else 1 - y_prob[i]
-        correct = "✓" if y_pred[i] == y_test[i] else "✗"
+        correct = "Y" if y_pred[i] == y_test[i] else "N"
         
         print(f"{matchup:<20} {pred_winner:<12} {actual_winner:<12} {prob:.0%}      {correct}")
     

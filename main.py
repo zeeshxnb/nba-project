@@ -1,19 +1,4 @@
-"""
-NBA Playoff Bracket Predictor
-=============================
-Main entry point for running the complete prediction pipeline.
-
-Usage:
-    python main.py                    # Run full pipeline
-    python main.py --evaluate         # Run model evaluation only
-    python main.py --tune             # Run hyperparameter tuning
-    python main.py --overfit          # Run overfitting analysis
-    python main.py --advanced         # Run advanced analysis (feature selection + Monte Carlo)
-    python main.py --predict 2022-23  # Predict specific season bracket
-"""
-
 import argparse
-import sys
 
 
 def run_evaluation():
@@ -47,13 +32,13 @@ def run_overfitting_analysis():
 
 
 def run_advanced_analysis():
-    """Run advanced analysis (feature selection + Monte Carlo)."""
+    """Run feature selection and Monte Carlo analysis."""
     from src.evaluate import run_all_advanced
     run_all_advanced()
 
 
 def run_bracket_prediction(season='2022-23'):
-    """Run bracket prediction for a specific season."""
+    """Predict playoff bracket for a given season."""
     print("\n" + "=" * 70)
     print(f"STEP 4: BRACKET PREDICTION ({season})")
     print("=" * 70)
@@ -61,7 +46,6 @@ def run_bracket_prediction(season='2022-23'):
     from src.predict import PlayoffBracket
     from src.models.ensemble import PlayoffPredictor
     
-    # Playoff seeds for available seasons
     playoff_seeds = {
         '2022-23': {
             'west': ['DEN', 'MEM', 'SAC', 'PHX', 'LAC', 'GSW', 'LAL', 'MIN'],
@@ -79,7 +63,6 @@ def run_bracket_prediction(season='2022-23'):
     
     seeds = playoff_seeds[season]
     
-    # Use ensemble model (best overall)
     class EnsembleWrapper:
         def __init__(self):
             self.ensemble = PlayoffPredictor()
@@ -103,34 +86,24 @@ def run_bracket_prediction(season='2022-23'):
 def run_full_pipeline():
     """Run the complete pipeline."""
     print("=" * 70)
-    print("🏀 NBA PLAYOFF BRACKET PREDICTOR")
+    print("NBA PLAYOFF BRACKET PREDICTOR")
     print("=" * 70)
-    print("""
-This project predicts NBA playoff series winners using machine learning.
-Models: Logistic Regression, XGBoost, Random Forest, SVM, Ensemble
-    """)
+    print("\nPredicts playoff series winners using machine learning.")
+    print("Models: Logistic Regression, XGBoost, Random Forest, SVM, Ensemble\n")
     
-    # Step 1: Evaluation
     run_evaluation()
-    
-    # Step 2: Show overfitting analysis (without plots for CLI)
     run_overfitting_analysis()
-    
-    # Step 3: Bracket prediction
     run_bracket_prediction('2022-23')
     
     print("\n" + "=" * 70)
-    print("✅ PIPELINE COMPLETE")
+    print("PIPELINE COMPLETE")
     print("=" * 70)
-    print("""
-Summary:
-- Per-series accuracy: ~75% (cross-validated)
-- Champion prediction: ~35-40% (5-6x better than random)
-- Best model: Ensemble (Logistic + XGBoost)
-
-For hyperparameter tuning, run: python main.py --tune
-For learning curves, run: python -m src.evaluate.overfitting
-    """)
+    print("\nSummary:")
+    print("- Per-series accuracy: ~75% (cross-validated)")
+    print("- Champion prediction: ~35-40% (5-6x better than random)")
+    print("- Best model: Ensemble (Logistic + XGBoost)")
+    print("\nFor tuning: python main.py --tune")
+    print("For learning curves: python -m src.evaluate.overfitting\n")
 
 
 def main():
@@ -138,8 +111,8 @@ def main():
     parser.add_argument('--evaluate', action='store_true', help='Run model evaluation')
     parser.add_argument('--tune', action='store_true', help='Run hyperparameter tuning')
     parser.add_argument('--overfit', action='store_true', help='Run overfitting analysis')
-    parser.add_argument('--advanced', action='store_true', help='Run advanced analysis (feature selection + Monte Carlo)')
-    parser.add_argument('--predict', type=str, metavar='SEASON', help='Predict bracket for season (e.g., 2022-23)')
+    parser.add_argument('--advanced', action='store_true', help='Run advanced analysis')
+    parser.add_argument('--predict', type=str, metavar='SEASON', help='Predict bracket for season')
     
     args = parser.parse_args()
     

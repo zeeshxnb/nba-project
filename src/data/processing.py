@@ -1,19 +1,20 @@
+"""Data processing and feature engineering."""
+
 import pandas as pd
 from .ingest import load_team_stats, load_series_history
 
-# Stats to compute differentials for (higher = better for team)
+# Features where higher is better
 DIFF_FEATURES = [
     'NET_RATING', 'OFF_RATING', 'W_PCT', 'TS_PCT', 'EFG_PCT', 
     'OREB_PCT', 'FTA_RATE', 'OPP_TOV_PCT'
 ]
-# Stats where lower is better (flip sign)
+
+# Features where lower is better (sign flipped)
 INVERSE_FEATURES = ['DEF_RATING', 'TM_TOV_PCT', 'OPP_EFG_PCT', 'OPP_OREB_PCT', 'OPP_FTA_RATE']
 
-def build_matchup_features(series_df: pd.DataFrame, team_stats: pd.DataFrame) -> pd.DataFrame:
-    """
-    Build feature matrix for each historical series matchup.
-    Features are differentials: team_a_stat - team_b_stat
-    """
+
+def build_matchup_features(series_df, team_stats):
+    """Build feature matrix with differentials for each matchup."""
     stats_by_abbrev = _create_abbrev_mapping(team_stats)
     
     features = []
@@ -21,27 +22,22 @@ def build_matchup_features(series_df: pd.DataFrame, team_stats: pd.DataFrame) ->
         season = row['season']
         team_a, team_b = row['team_a'], row['team_b']
         
-        # Get team stats for this season
         a_stats = stats_by_abbrev.get((team_a, season))
         b_stats = stats_by_abbrev.get((team_b, season))
         
         if a_stats is None or b_stats is None:
             continue
         
-        # Calculate differentials
         feat = {'season': season, 'team_a': team_a, 'team_b': team_b}
         
         for col in DIFF_FEATURES:
             feat[f'{col.lower()}_diff'] = a_stats[col] - b_stats[col]
         
         for col in INVERSE_FEATURES:
-            # Flip sign: lower DEF_RATING is better, so we want (b - a)
             feat[f'{col.lower()}_diff'] = b_stats[col] - a_stats[col]
         
-        # Home court: team with better record has it
         feat['home_court'] = 1 if a_stats['W_PCT'] >= b_stats['W_PCT'] else 0
         
-        # Target: did team_a win? (If winner column exists)
         if 'winner' in row:
             feat['team_a_won'] = 1 if row['winner'] == team_a else 0
         
@@ -49,7 +45,8 @@ def build_matchup_features(series_df: pd.DataFrame, team_stats: pd.DataFrame) ->
     
     return pd.DataFrame(features)
 
-def _create_abbrev_mapping(team_stats: pd.DataFrame) -> dict:
+
+def _create_abbrev_mapping(team_stats):
     """Create (abbreviation, season) -> stats mapping."""
     abbrev_map = {
         'Atlanta Hawks': 'ATL', 'Boston Celtics': 'BOS', 'Brooklyn Nets': 'BKN',
@@ -75,15 +72,16 @@ def _create_abbrev_mapping(team_stats: pd.DataFrame) -> dict:
     
     return mapping
 
-def get_feature_columns() -> list:
+
+def get_feature_columns():
     """Return list of feature column names."""
     cols = [f'{c.lower()}_diff' for c in DIFF_FEATURES + INVERSE_FEATURES]
     cols.append('home_court')
     return cols
 
+
 def make_dataset():
-    """Orchestrator: Load data -> Process -> Return DataFrame"""
+    """Load data and build feature matrix."""
     team_stats = load_team_stats()
     series_history = load_series_history()
     return build_matchup_features(series_history, team_stats)
-

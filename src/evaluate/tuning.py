@@ -13,19 +13,12 @@ from ..data.processing import make_dataset, get_feature_columns
 
 
 def tune_all_models(cv=5):
-    """
-    Run GridSearchCV on all models to find best hyperparameters.
-    
-    Returns:
-        dict with best params and scores for each model
-    """
-    # Load data
+    """Run GridSearchCV on all models to find best hyperparameters."""
     df = make_dataset()
     feature_cols = get_feature_columns()
     X = df[feature_cols].values
     y = df['team_a_won'].values
     
-    # Scale for models that need it
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
     
@@ -38,7 +31,7 @@ def tune_all_models(cv=5):
     
     results = {}
     
-    # 1. Logistic Regression
+    # Logistic Regression
     print("Tuning Logistic Regression...")
     lr_params = {
         'C': [0.01, 0.1, 1.0, 10.0],
@@ -60,7 +53,7 @@ def tune_all_models(cv=5):
     }
     print(f"  Best: {lr_grid.best_score_:.1%} | Params: {lr_grid.best_params_}")
     
-    # 2. XGBoost
+    # XGBoost
     print("Tuning XGBoost...")
     xgb_params = {
         'n_estimators': [50, 100, 200],
@@ -82,7 +75,7 @@ def tune_all_models(cv=5):
     }
     print(f"  Best: {xgb_grid.best_score_:.1%} | Params: {xgb_grid.best_params_}")
     
-    # 3. Random Forest
+    # Random Forest
     print("Tuning Random Forest...")
     rf_params = {
         'n_estimators': [50, 100, 200],
@@ -104,7 +97,7 @@ def tune_all_models(cv=5):
     }
     print(f"  Best: {rf_grid.best_score_:.1%} | Params: {rf_grid.best_params_}")
     
-    # 4. SVM
+    # SVM
     print("Tuning SVM...")
     svm_params = {
         'C': [0.1, 1.0, 10.0],
@@ -142,13 +135,11 @@ def tune_all_models(cv=5):
     
     print("-" * 70)
     
-    # Best overall
     best_model = max(results, key=lambda k: results[k]['best_score'])
-    print(f"\n🏆 Best Model (after tuning): {best_model} ({results[best_model]['best_score']:.1%})")
+    print(f"\nBest Model (after tuning): {best_model} ({results[best_model]['best_score']:.1%})")
     
     return results
 
 
 if __name__ == "__main__":
     tune_all_models()
-

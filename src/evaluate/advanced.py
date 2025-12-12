@@ -1,10 +1,4 @@
-"""
-Advanced Analysis - "Something Extra"
-=====================================
-1. Feature Selection with RFE
-2. Feature Importance Comparison Across Models
-3. Monte Carlo Bracket Simulation
-"""
+"""Advanced analysis: feature selection and Monte Carlo simulation."""
 
 import numpy as np
 import pandas as pd
@@ -19,9 +13,7 @@ from ..data.processing import make_dataset, get_feature_columns
 
 
 def run_feature_selection():
-    """
-    Perform feature selection analysis using multiple methods.
-    """
+    """Perform feature selection using multiple methods."""
     df = make_dataset()
     feature_cols = get_feature_columns()
     X = df[feature_cols].values
@@ -35,7 +27,7 @@ def run_feature_selection():
     print("=" * 70)
     print(f"\nOriginal features: {len(feature_cols)}")
     
-    # Method 1: Recursive Feature Elimination (RFE)
+    # Method 1: RFE
     print("\n--- Method 1: Recursive Feature Elimination (RFE) ---")
     lr = LogisticRegression(max_iter=1000, random_state=42)
     rfe = RFE(lr, n_features_to_select=5, step=1)
@@ -44,7 +36,7 @@ def run_feature_selection():
     rfe_selected = [f for f, s in zip(feature_cols, rfe.support_) if s]
     print(f"Top 5 features (RFE): {rfe_selected}")
     
-    # Method 2: SelectKBest (ANOVA F-test)
+    # Method 2: SelectKBest
     print("\n--- Method 2: SelectKBest (ANOVA F-test) ---")
     selector = SelectKBest(f_classif, k=5)
     selector.fit(X, y)
@@ -55,7 +47,7 @@ def run_feature_selection():
     for feat, score in kbest_sorted:
         print(f"  {feat:<22} F-score: {score:.2f}")
     
-    # Method 3: Random Forest Importance
+    # Method 3: Random Forest
     print("\n--- Method 3: Random Forest Feature Importance ---")
     rf = RandomForestClassifier(n_estimators=100, random_state=42)
     rf.fit(X, y)
@@ -66,7 +58,7 @@ def run_feature_selection():
     for feat, imp in rf_sorted:
         print(f"  {feat:<22} Importance: {imp:.3f}")
     
-    # Method 4: XGBoost Importance
+    # Method 4: XGBoost
     print("\n--- Method 4: XGBoost Feature Importance ---")
     xgb = XGBClassifier(n_estimators=100, max_depth=3, eval_metric='logloss', random_state=42)
     xgb.fit(X, y)
@@ -77,7 +69,7 @@ def run_feature_selection():
     for feat, imp in xgb_sorted:
         print(f"  {feat:<22} Importance: {imp:.3f}")
     
-    # Summary: Features that appear in multiple methods
+    # Summary
     print("\n" + "=" * 70)
     print("CONSENSUS TOP FEATURES")
     print("=" * 70)
@@ -91,21 +83,16 @@ def run_feature_selection():
     from collections import Counter
     feature_counts = Counter(all_top)
     
-    print("\nFeatures ranked by how many methods selected them:")
+    print("\nFeatures ranked by selection frequency:")
     for feat, count in feature_counts.most_common():
-        bar = "█" * count
+        bar = "#" * count
         print(f"  {feat:<22} {bar} ({count}/4 methods)")
     
     return feature_counts
 
 
 def run_monte_carlo_bracket(n_simulations=1000):
-    """
-    Monte Carlo simulation of playoff bracket.
-    
-    Instead of deterministic predictions, we sample from predicted
-    probabilities to simulate many possible outcomes.
-    """
+    """Monte Carlo simulation of playoff bracket."""
     from ..predict.bracket import PlayoffBracket
     from ..models.ensemble import PlayoffPredictor
     
@@ -113,12 +100,10 @@ def run_monte_carlo_bracket(n_simulations=1000):
     print(f"MONTE CARLO BRACKET SIMULATION ({n_simulations:,} runs)")
     print("=" * 70)
     
-    # 2022-23 seeds
     west = ['DEN', 'MEM', 'SAC', 'PHX', 'LAC', 'GSW', 'LAL', 'MIN']
     east = ['MIL', 'BOS', 'PHI', 'CLE', 'NYK', 'BKN', 'MIA', 'ATL']
     season = '2022-23'
     
-    # Train model
     df = make_dataset()
     feature_cols = get_feature_columns()
     X = df[feature_cols].values
@@ -127,26 +112,20 @@ def run_monte_carlo_bracket(n_simulations=1000):
     model = PlayoffPredictor()
     model.train(X, y)
     
-    # Get bracket predictor for probabilities
     bracket = PlayoffBracket()
     bracket.train()
     
     print(f"\nSimulating {n_simulations:,} playoff brackets...")
-    print("(Sampling from win probabilities instead of taking max)")
     
     champion_counts = {}
     finals_counts = {}
     
-    # First, get all matchup probabilities
     def simulate_series(team_a, team_b, prob_a):
-        """Randomly determine winner based on probability."""
         return team_a if np.random.random() < prob_a else team_b
     
     def simulate_bracket(west_seeds, east_seeds):
-        """Simulate one complete bracket."""
         matchup_order = [(0, 7), (3, 4), (2, 5), (1, 6)]
         
-        # First round
         west_r2 = []
         east_r2 = []
         
@@ -154,13 +133,12 @@ def run_monte_carlo_bracket(n_simulations=1000):
             for high, low in matchup_order:
                 result = bracket.predict_series(seeds[high], seeds[low], season)
                 if 'error' in result:
-                    winners.append(seeds[high])  # Default to higher seed
+                    winners.append(seeds[high])
                 else:
                     prob_a = result['team_a_prob']
                     winner = simulate_series(seeds[high], seeds[low], prob_a)
                     winners.append(winner)
         
-        # Second round
         west_cf = []
         east_cf = []
         
@@ -174,7 +152,6 @@ def run_monte_carlo_bracket(n_simulations=1000):
                     winner = simulate_series(r2[a], r2[b], prob_a)
                     cf.append(winner)
         
-        # Conference finals
         west_result = bracket.predict_series(west_cf[0], west_cf[1], season)
         if 'error' in west_result:
             west_champ = west_cf[0]
@@ -187,7 +164,6 @@ def run_monte_carlo_bracket(n_simulations=1000):
         else:
             east_champ = simulate_series(east_cf[0], east_cf[1], east_result['team_a_prob'])
         
-        # Finals
         finals_result = bracket.predict_series(west_champ, east_champ, season)
         if 'error' in finals_result:
             champion = west_champ
@@ -196,7 +172,6 @@ def run_monte_carlo_bracket(n_simulations=1000):
         
         return champion, (west_champ, east_champ)
     
-    # Run simulations (suppress bracket output)
     import sys
     from io import StringIO
     old_stdout = sys.stdout
@@ -213,7 +188,6 @@ def run_monte_carlo_bracket(n_simulations=1000):
         if (i + 1) % 200 == 0:
             print(f"  Completed {i+1:,} simulations...")
     
-    # Results
     print("\n" + "-" * 70)
     print("CHAMPIONSHIP PROBABILITIES (Monte Carlo)")
     print("-" * 70)
@@ -221,7 +195,7 @@ def run_monte_carlo_bracket(n_simulations=1000):
     sorted_champs = sorted(champion_counts.items(), key=lambda x: -x[1])
     for team, count in sorted_champs[:8]:
         prob = count / n_simulations * 100
-        bar = "█" * int(prob / 2)
+        bar = "#" * int(prob / 2)
         print(f"  {team:<6} {prob:5.1f}% {bar}")
     
     print("\n" + "-" * 70)
@@ -233,7 +207,6 @@ def run_monte_carlo_bracket(n_simulations=1000):
         prob = count / n_simulations * 100
         print(f"  {teams[0]} vs {teams[1]}: {prob:.1f}%")
     
-    # Actual result comparison
     print("\n" + "-" * 70)
     print("COMPARISON TO ACTUAL RESULT")
     print("-" * 70)
@@ -245,9 +218,9 @@ def run_monte_carlo_bracket(n_simulations=1000):
     finals_prob = finals_counts.get(finals_key, 0) / n_simulations * 100
     
     print(f"  Actual Champion: {actual_champ}")
-    print(f"  Our model gave DEN: {champ_prob:.1f}% championship probability")
+    print(f"  Model probability for DEN: {champ_prob:.1f}%")
     print(f"  Actual Finals: DEN vs MIA")
-    print(f"  Our model gave this matchup: {finals_prob:.1f}% probability")
+    print(f"  Model probability for this matchup: {finals_prob:.1f}%")
     
     return champion_counts, finals_counts
 
@@ -255,35 +228,21 @@ def run_monte_carlo_bracket(n_simulations=1000):
 def run_all_advanced():
     """Run all advanced analyses."""
     print("\n" + "=" * 70)
-    print("🚀 ADVANCED ANALYSIS - SOMETHING EXTRA")
+    print("ADVANCED ANALYSIS")
     print("=" * 70)
     
-    # Part 1: Feature Selection
     feature_counts = run_feature_selection()
-    
-    # Part 2: Monte Carlo
     champ_counts, finals_counts = run_monte_carlo_bracket(n_simulations=500)
     
     print("\n" + "=" * 70)
-    print("✅ ADVANCED ANALYSIS COMPLETE")
+    print("ADVANCED ANALYSIS COMPLETE")
     print("=" * 70)
     print("""
-Summary of "Something Extra":
-─────────────────────────────────────────────────────────────────────
-1. FEATURE SELECTION
-   - Compared 4 different feature selection methods
-   - Identified consensus important features
-   - w_pct_diff and net_rating_diff consistently top ranked
-
-2. MONTE CARLO BRACKET SIMULATION
-   - Instead of single deterministic prediction
-   - Simulated 500 possible bracket outcomes
-   - Provides championship PROBABILITIES, not just picks
-   - More realistic uncertainty quantification
-─────────────────────────────────────────────────────────────────────
+Summary:
+1. Feature Selection - Compared 4 methods, identified consensus features
+2. Monte Carlo Simulation - 500 bracket simulations for probability estimates
 """)
 
 
 if __name__ == "__main__":
     run_all_advanced()
-

@@ -1,4 +1,4 @@
-"""Playoff bracket predictor - simulate full playoffs to predict champion."""
+"""Playoff bracket predictor."""
 
 import numpy as np
 import pandas as pd
@@ -11,12 +11,6 @@ class PlayoffBracket:
     """Simulate NBA playoff bracket and predict champion."""
     
     def __init__(self, model=None):
-        """
-        Initialize bracket predictor.
-        
-        Args:
-            model: Trained model (default: LogisticModel trained on all data)
-        """
         self.model = model
         self.feature_cols = get_feature_columns()
         self.team_stats = None
@@ -35,22 +29,11 @@ class PlayoffBracket:
         self.team_stats = load_team_stats()
         self._trained = True
         
-    def predict_series(self, team_a: str, team_b: str, season: str) -> dict:
-        """
-        Predict winner of a single playoff series.
-        
-        Args:
-            team_a: Team abbreviation (e.g., 'BOS')
-            team_b: Team abbreviation (e.g., 'MIA')
-            season: Season string (e.g., '2022-23')
-            
-        Returns:
-            dict with winner, probability, and matchup details
-        """
+    def predict_series(self, team_a, team_b, season):
+        """Predict winner of a single playoff series."""
         if not self._trained:
             self.train()
             
-        # Build features for this matchup
         features = self._build_single_matchup_features(team_a, team_b, season)
         
         if features is None:
@@ -70,18 +53,8 @@ class PlayoffBracket:
             'team_a_prob': prob_a
         }
     
-    def predict_bracket(self, west_seeds: list, east_seeds: list, season: str) -> dict:
-        """
-        Simulate full playoff bracket.
-        
-        Args:
-            west_seeds: List of 8 team abbreviations [1-seed, 2-seed, ..., 8-seed]
-            east_seeds: List of 8 team abbreviations [1-seed, 2-seed, ..., 8-seed]
-            season: Season string (e.g., '2022-23')
-            
-        Returns:
-            dict with full bracket results and champion
-        """
+    def predict_bracket(self, west_seeds, east_seeds, season):
+        """Simulate full playoff bracket."""
         if not self._trained:
             self.train()
             
@@ -92,15 +65,14 @@ class PlayoffBracket:
             'champion': None
         }
         
-        # First round matchups: 1v8, 4v5, 3v6, 2v7
         matchup_order = [(0, 7), (3, 4), (2, 5), (1, 6)]
         
         print("=" * 60)
         print(f"NBA PLAYOFF BRACKET PREDICTION - {season}")
         print("=" * 60)
         
-        # --- FIRST ROUND ---
-        print("\n🏀 FIRST ROUND")
+        # First Round
+        print("\nFIRST ROUND")
         print("-" * 60)
         
         west_r2 = []
@@ -128,14 +100,13 @@ class PlayoffBracket:
                 else:
                     results['east']['round1'].append(result)
         
-        # --- SECOND ROUND ---
-        print("\n🏀 SECOND ROUND")
+        # Second Round
+        print("\nSECOND ROUND")
         print("-" * 60)
         
         west_cf = []
         east_cf = []
         
-        # R2 matchups: winner of 1v8 vs winner of 4v5, winner of 3v6 vs winner of 2v7
         r2_matchups = [(0, 1), (2, 3)]
         
         for conf, r2, cf_winners in [('WEST', west_r2, west_cf), ('EAST', east_r2, east_cf)]:
@@ -154,24 +125,22 @@ class PlayoffBracket:
                 else:
                     results['east']['round2'].append(result)
         
-        # --- CONFERENCE FINALS ---
-        print("\n🏀 CONFERENCE FINALS")
+        # Conference Finals
+        print("\nCONFERENCE FINALS")
         print("-" * 60)
         
-        # West Finals
         west_result = self.predict_series(west_cf[0], west_cf[1], season)
         west_champ = west_result['winner']
         print(f"  WEST: {west_cf[0]} vs {west_cf[1]}: {west_champ} wins ({west_result['probability']:.0%})")
         results['west']['conf_finals'] = west_result
         
-        # East Finals
         east_result = self.predict_series(east_cf[0], east_cf[1], season)
         east_champ = east_result['winner']
         print(f"  EAST: {east_cf[0]} vs {east_cf[1]}: {east_champ} wins ({east_result['probability']:.0%})")
         results['east']['conf_finals'] = east_result
         
-        # --- NBA FINALS ---
-        print("\n🏆 NBA FINALS")
+        # Finals
+        print("\nNBA FINALS")
         print("-" * 60)
         
         finals_result = self.predict_series(west_champ, east_champ, season)
@@ -182,16 +151,15 @@ class PlayoffBracket:
         results['champion'] = champion
         
         print("\n" + "=" * 60)
-        print(f"🏆 PREDICTED CHAMPION: {champion}")
+        print(f"PREDICTED CHAMPION: {champion}")
         print("=" * 60)
         
         return results
     
-    def _build_single_matchup_features(self, team_a: str, team_b: str, season: str) -> list:
+    def _build_single_matchup_features(self, team_a, team_b, season):
         """Build feature vector for a single matchup."""
         from ..data.processing import DIFF_FEATURES, INVERSE_FEATURES
         
-        # Create abbreviation mapping
         abbrev_map = {
             'Atlanta Hawks': 'ATL', 'Boston Celtics': 'BOS', 'Brooklyn Nets': 'BKN',
             'Charlotte Hornets': 'CHA', 'Charlotte Bobcats': 'CHA', 'Chicago Bulls': 'CHI',
@@ -206,11 +174,6 @@ class PlayoffBracket:
             'Utah Jazz': 'UTA', 'Washington Wizards': 'WAS',
         }
         
-        # Reverse mapping
-        name_to_abbrev = abbrev_map
-        abbrev_to_name = {v: k for k, v in abbrev_map.items()}
-        
-        # Get stats for both teams
         a_stats = self.team_stats[
             (self.team_stats['TEAM_NAME'].map(abbrev_map) == team_a) & 
             (self.team_stats['SEASON'] == season)
@@ -226,7 +189,6 @@ class PlayoffBracket:
         a_stats = a_stats.iloc[0]
         b_stats = b_stats.iloc[0]
         
-        # Build features in same order as training
         features = []
         
         for col in DIFF_FEATURES:
@@ -235,30 +197,27 @@ class PlayoffBracket:
         for col in INVERSE_FEATURES:
             features.append(b_stats[col] - a_stats[col])
         
-        # Home court
         home_court = 1 if a_stats['W_PCT'] >= b_stats['W_PCT'] else 0
         features.append(home_court)
         
         return features
 
 
-def predict_series(team_a: str, team_b: str, season: str = '2022-23') -> dict:
+def predict_series(team_a, team_b, season='2022-23'):
     """Convenience function to predict a single series."""
     bracket = PlayoffBracket()
     return bracket.predict_series(team_a, team_b, season)
 
 
-def predict_bracket(west_seeds: list, east_seeds: list, season: str = '2022-23') -> dict:
+def predict_bracket(west_seeds, east_seeds, season='2022-23'):
     """Convenience function to predict full bracket."""
     bracket = PlayoffBracket()
     return bracket.predict_bracket(west_seeds, east_seeds, season)
 
 
 if __name__ == "__main__":
-    # Example: 2022-23 playoffs
     west_2023 = ['DEN', 'MEM', 'SAC', 'PHX', 'LAC', 'GSW', 'LAL', 'MIN']
     east_2023 = ['MIL', 'BOS', 'PHI', 'CLE', 'NYK', 'BKN', 'MIA', 'ATL']
     
     bracket = PlayoffBracket()
     results = bracket.predict_bracket(west_2023, east_2023, '2022-23')
-

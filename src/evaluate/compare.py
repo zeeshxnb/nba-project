@@ -9,7 +9,7 @@ from ..models.logistic import LogisticModel
 from ..models.xgboost_model import XGBoostModel
 from ..models.random_forest import RandomForestModel
 from ..models.svm import SVMModel
-from .split import get_train_test_split, get_data_info
+from .split import get_train_test_split, get_data_info, DEFAULT_TEST_SEASONS
 
 
 def get_all_models():
@@ -22,17 +22,20 @@ def get_all_models():
     }
 
 
-def evaluate_all_models(test_season='2022-23', cv=5):
+def evaluate_all_models(test_seasons=None, cv=5):
     """Evaluate all models using cross-validation and held-out test set."""
-    X_train, X_test, y_train, y_test, feature_cols, df = get_train_test_split(test_season)
+    if test_seasons is None:
+        test_seasons = DEFAULT_TEST_SEASONS
+    
+    X_train, X_test, y_train, y_test, feature_cols, df, test_df = get_train_test_split(test_seasons)
     
     print("=" * 70)
     print("MODEL EVALUATION")
     print("=" * 70)
     print(f"\nMethodology:")
-    print(f"  1. Train on: 1996-97 to 2022-23 ({len(y_train)} series)")
+    print(f"  1. Train on: {len(y_train)} series (excluding test seasons)")
     print(f"  2. Cross-validation: {cv}-fold CV on training data")
-    print(f"  3. Test on: {test_season} ({len(y_test)} series) - NEVER seen during training")
+    print(f"  3. Test on: {len(test_seasons)} seasons ({len(y_test)} series) - NEVER seen during training")
     print()
     
     models = get_all_models()
@@ -88,10 +91,15 @@ def evaluate_all_models(test_season='2022-23', cv=5):
     return results_df, models
 
 
-def show_test_predictions(test_season='2022-23'):
-    """Show individual predictions for test set."""
-    X_train, X_test, y_train, y_test, feature_cols, df = get_train_test_split(test_season)
-    test_df = df[df['season'] == test_season].reset_index(drop=True)
+def show_test_predictions(test_seasons=None):
+    """Show individual predictions for test set by season."""
+    if test_seasons is None:
+        test_seasons = DEFAULT_TEST_SEASONS
+    
+    if isinstance(test_seasons, str):
+        test_seasons = [test_seasons]
+    
+    X_train, X_test, y_train, y_test, feature_cols, df, test_df = get_train_test_split(test_seasons)
     
     model = LogisticModel()
     model.train(X_train, y_train, feature_names=feature_cols)
@@ -100,30 +108,60 @@ def show_test_predictions(test_season='2022-23'):
     y_prob = model.predict_proba(X_test)
     
     print("\n" + "=" * 70)
-    print(f"INDIVIDUAL PREDICTIONS - {test_season} PLAYOFFS")
+    print(f"INDIVIDUAL PREDICTIONS - {len(test_seasons)} TEST SEASONS")
     print("=" * 70)
-    print(f"\n{'Matchup':<20} {'Predicted':<12} {'Actual':<12} {'Prob':<8} {'Result'}")
-    print("-" * 70)
     
-    for i, row in test_df.iterrows():
-        matchup = f"{row['team_a']} vs {row['team_b']}"
-        pred_winner = row['team_a'] if y_pred[i] == 1 else row['team_b']
-        actual_winner = row['team_a'] if y_test[i] == 1 else row['team_b']
-        prob = y_prob[i] if y_pred[i] == 1 else 1 - y_prob[i]
-        correct = "Y" if y_pred[i] == y_test[i] else "N"
+    total_correct = 0
+    total_games = 0
+    
+    for season in test_seasons:
+        season_mask = test_df['season'] == season
+        season_df = test_df[season_mask].reset_index(drop=True)
+        season_indices = np.where(test_df['season'].values == season)[0]
         
-        print(f"{matchup:<20} {pred_winner:<12} {actual_winner:<12} {prob:.0%}      {correct}")
+        if len(season_df) == 0:
+            continue
+        
+        print(f"\n--- {season} PLAYOFFS ---")
+        print(f"{'Matchup':<20} {'Predicted':<12} {'Actual':<12} {'Prob':<8} {'Result'}")
+        print("-" * 60)
+        
+        season_correct = 0
+        for idx, (_, row) in enumerate(season_df.iterrows()):
+            pred_idx = season_indices[idx]
+            pred = y_pred[pred_idx]
+            actual = y_test[pred_idx]
+            prob = y_prob[pred_idx]
+            
+            matchup = f"{row['team_a']} vs {row['team_b']}"
+            pred_winner = row['team_a'] if pred == 1 else row['team_b']
+            actual_winner = row['team_a'] if actual == 1 else row['team_b']
+            conf = prob if pred == 1 else 1 - prob
+            correct = "Y" if pred == actual else "N"
+            
+            if pred == actual:
+                season_correct += 1
+            
+            print(f"{matchup:<20} {pred_winner:<12} {actual_winner:<12} {conf:.0%}      {correct}")
+        
+        print(f"Season Total: {season_correct}/{len(season_df)} correct ({season_correct/len(season_df):.0%})")
+        total_correct += season_correct
+        total_games += len(season_df)
     
+    print("\n" + "-" * 70)
+    print(f"OVERALL: {total_correct}/{total_games} correct ({total_correct/total_games:.0%})")
     print("-" * 70)
-    print(f"Total: {(y_pred == y_test).sum()}/{len(y_test)} correct")
 
 
-def run_full_evaluation(test_season='2022-23'):
+def run_full_evaluation(test_seasons=None):
     """Run complete evaluation pipeline."""
-    get_data_info(test_season)
+    if test_seasons is None:
+        test_seasons = DEFAULT_TEST_SEASONS
+    
+    get_data_info(test_seasons)
     print()
-    results_df, models = evaluate_all_models(test_season)
-    show_test_predictions(test_season)
+    results_df, models = evaluate_all_models(test_seasons)
+    show_test_predictions(test_seasons)
     return results_df
 
 
